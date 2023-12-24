@@ -17,10 +17,13 @@ class mcWriter():
         self.file.write(
             struct.pack("i",0) # Data Size
         )
-        # The rest is just Text
+        self.file.write(
+            struct.pack("i",0) # Text Size
+        )
         
         self.dcb  = 0
         self.data = 0
+        self.text = 0
         
         self.process()
         self.file.seek(4,0) # 4 to Skip Sign
@@ -30,6 +33,10 @@ class mcWriter():
         self.file.write(
             struct.pack("i",self.data) # Data Size
         )
+        self.file.write(
+            struct.pack("i",self.text) # Data Size
+        )
+        print(self.dcb, self.data, self.text)
         self.file.close()
         
     def process(self)->None:
@@ -39,12 +46,11 @@ class mcWriter():
             
             name   = obj.name
             value  = obj.value
-            o_type = ret_type(value)
             machine_code = struct.pack(
                 f"h{len(name)}s", len(name), name.encode()
             ) + self.process_value(value)
             self.file.write(machine_code)
-            self.dcb+=len(machine_code)
+            self.dcb+=1
         
         for obj in self.execs.data:
             if not isinstance(obj, self.execs.Variable):
@@ -52,12 +58,11 @@ class mcWriter():
             
             name   = obj.name
             value  = (obj.value if obj.value else 0)
-            o_type = obj.type
             machine_code = struct.pack(
                 f"h{len(name)}s", len(name), name.encode()
             ) + self.process_value(value)
             self.file.write(machine_code)
-            self.data+=len(machine_code)
+            self.data+=1
         
         for obj in self.execs.text:
             if not isinstance(obj, self.execs.Function):
@@ -85,16 +90,13 @@ class mcWriter():
                 self.file.write(
                     inscode
                 )
+            self.text+=1
     
     def process_value(self, value:any):
         o_type = ret_type(value)
         if o_type == Types.IDENTIFIER:
             target_code = struct.pack(
-                f"hh{len(target.variable)}s", o_type.id, len(value.variable), value.variable.encode()
-            )
-        elif o_type == Types.POINTER:
-            target_code = struct.pack(
-                f"h"+o_type.format, o_type.id, value.address
+                f"hh{len(value.variable)}s", o_type.id, len(value.variable), value.variable.encode()
             )
         elif o_type == Types.POINTER:
             target_code = struct.pack(

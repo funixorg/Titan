@@ -41,4 +41,4 @@ m_prog.new_function(
 
 
 
-mwt = mcWriter(m_prog, "gen_mbin")
+mwt = mcWriter(m_prog, "initramdir/sys/bin/testbin")
