@@ -9,16 +9,16 @@ class mcWriter():
         self.execs = executable
         self.file  = open(path, "wb")
         self.file.write(
-            struct.pack("i",TITAN_SIGNATURE) # Executable sign
+            struct.pack("<i",TITAN_SIGNATURE) # Executable sign
         )
         self.file.write(
-            struct.pack("i",0) # DCB Size
+            struct.pack("<i",0) # DCB Size
         )
         self.file.write(
-            struct.pack("i",0) # Data Size
+            struct.pack("<i",0) # Data Size
         )
         self.file.write(
-            struct.pack("i",0) # Text Size
+            struct.pack("<i",0) # Text Size
         )
         
         self.dcb  = 0
@@ -28,15 +28,14 @@ class mcWriter():
         self.process()
         self.file.seek(4,0) # 4 to Skip Sign
         self.file.write(
-            struct.pack("i",self.dcb) # DCB Size 
+            struct.pack("<i",self.dcb) # DCB Size 
         )
         self.file.write(
-            struct.pack("i",self.data) # Data Size
+            struct.pack("<i",self.data) # Data Size
         )
         self.file.write(
-            struct.pack("i",self.text) # Data Size
+            struct.pack("<i",self.text) # Data Size
         )
-        print(self.dcb, self.data, self.text)
         self.file.close()
         
     def process(self)->None:
@@ -47,7 +46,7 @@ class mcWriter():
             name   = obj.name
             value  = obj.value
             machine_code = struct.pack(
-                f"h{len(name)}s", len(name), name.encode()
+                f"<h{len(name)}s", len(name), name.encode()
             ) + self.process_value(value)
             self.file.write(machine_code)
             self.dcb+=1
@@ -59,7 +58,7 @@ class mcWriter():
             name   = obj.name
             value  = (obj.value if obj.value else 0)
             machine_code = struct.pack(
-                f"h{len(name)}s", len(name), name.encode()
+                f"<h{len(name)}s", len(name), name.encode()
             ) + self.process_value(value)
             self.file.write(machine_code)
             self.data+=1
@@ -75,12 +74,12 @@ class mcWriter():
             paramsfmt = b""
             for param in parameters:
                 paramsfmt += struct.pack(
-                    f"h{len(param[0])}s", len(param[0]), param[0].encode()
+                    f"<h{len(param[0])}s", len(param[0]), (param[0]).encode()
                 )
             
             machine_code = struct.pack(
-                f"ih{len(name)}sh", FUNCTION_SIGNATURE, len(name), name.encode(),
-                len(parameters)
+                f"<ih{len(name)}shh", FUNCTION_SIGNATURE, len(name), name.encode(),
+                len(parameters), len(body)
             ) + paramsfmt
             self.file.write(machine_code)
             
@@ -96,20 +95,21 @@ class mcWriter():
         o_type = ret_type(value)
         if o_type == Types.IDENTIFIER:
             target_code = struct.pack(
-                f"hh{len(value.variable)}s", o_type.id, len(value.variable), value.variable.encode()
+                f"<hh{len(value.variable)}s", o_type.id, len(value.variable), value.variable.encode()
             )
         elif o_type == Types.POINTER:
             target_code = struct.pack(
-                f"h"+o_type.format, o_type.id, value.address
+                f"<h"+o_type.format, o_type.id, value.address
             )
         elif o_type == Types.REGISTER:
             target_code = struct.pack(
-                f"h"+o_type.format, o_type.id, value.opcode
+                f"<h"+o_type.format, o_type.id, value.opcode
             )
         else:
             target_code = struct.pack(
-                "h"+o_type.format, o_type.id, value
+                "<h"+o_type.format, o_type.id, value
             )
+            print(value, target_code)
         return target_code
         
     def process_instruction(self, instruction:any):
@@ -118,51 +118,51 @@ class mcWriter():
             source   = instruction.source
             target_o = self.process_value(target)
             source_o = self.process_value(source)
-            return struct.pack("h", Instructions.MOV.opcode) + target_o + source_o
+            return struct.pack("<h", Instructions.MOV.opcode) + target_o + source_o
 
         elif isinstance(instruction, self.execs.Call):
             name = instruction.name
-            return struct.pack(f"hh{len(name)}s", Instructions.CALL.opcode, len(name), name.encode())
+            return struct.pack(f"<hh{len(name)}s", Instructions.CALL.opcode, len(name), name.encode())
         
         elif isinstance(instruction, self.execs.Push):
             value   = instruction.value
             value_o = self.process_value(value)
-            return struct.pack("h", Instructions.PUSH.opcode) + value_o
+            return struct.pack("<h", Instructions.PUSH.opcode) + value_o
 
         elif isinstance(instruction, self.execs.Return):
-            return struct.pack("h", Instructions.RET.opcode)
+            return struct.pack("<h", Instructions.RET.opcode)
         
         elif isinstance(instruction, self.execs.Lea):
             target   = instruction.target
             source   = instruction.source
             target_o = self.process_value(target)
             source_o = self.process_value(source)
-            return struct.pack("h", Instructions.LEA.opcode) + target_o + source_o
+            return struct.pack("<h", Instructions.LEA.opcode) + target_o + source_o
         
         elif isinstance(instruction, self.execs.Add):
             target   = instruction.target
             source   = instruction.source
             target_o = self.process_value(target)
             source_o = self.process_value(source)
-            return struct.pack("h", Instructions.ADD.opcode) + target_o + source_o
+            return struct.pack("<h", Instructions.ADD.opcode) + target_o + source_o
         
         elif isinstance(instruction, self.execs.Sub):
             target   = instruction.target
             source   = instruction.source
             target_o = self.process_value(target)
             source_o = self.process_value(source)
-            return struct.pack("h", Instructions.SUB.opcode) + target_o + source_o
+            return struct.pack("<h", Instructions.SUB.opcode) + target_o + source_o
         
         elif isinstance(instruction, self.execs.Mul):
             target   = instruction.target
             source   = instruction.source
             target_o = self.process_value(target)
             source_o = self.process_value(source)
-            return struct.pack("h", Instructions.MUL.opcode) + target_o + source_o
+            return struct.pack("<h", Instructions.MUL.opcode) + target_o + source_o
         
         elif isinstance(instruction, self.execs.Div):
             target   = instruction.target
             source   = instruction.source
             target_o = self.process_value(target)
             source_o = self.process_value(source)
-            return struct.pack("h", Instructions.DIV.opcode) + target_o + source_o
+            return struct.pack("<h", Instructions.DIV.opcode) + target_o + source_o

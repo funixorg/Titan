@@ -9,7 +9,7 @@ m_prog = Executable()
 
 m_prog.new_constant(
     "magic",
-    0x1AF
+    0xF1A
 )
 
 m_prog.new_variable(
@@ -19,8 +19,10 @@ m_prog.new_variable(
 )
 
 m_prog.new_function(
-    "add",
-    [("a", Types.INT32)],
+    "addedzamuncabol",
+    [("a", Types.INT32),
+    ("b", Types.INT32),
+    ("c", Types.INT32)],
     [
         m_prog.Move(Registers.RDX, 50),
         m_prog.Move(Registers.RCX, 5),
